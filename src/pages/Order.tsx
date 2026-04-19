@@ -59,18 +59,22 @@ const stores = [
   'Velô Ibirapuera - Av. Ibirapuera, 3000',
 ];
 
-const nameSchema = z
+export const orderSchema = z.object({
+  name: z
   .string()
   .trim()
-  .min(2, 'Deve ter pelo menos 2 caracteres')
+  .min(2, 'Nome deve ter pelo menos 2 caracteres')
   .refine((value) => /^[A-Za-zÀ-ÿ\s'-]+$/.test(value), {
-    message: 'Não pode conter números ou caracteres especiais',
-  });
+    message: 'Nome não pode conter números ou caracteres especiais',
+  }),
 
-export const orderSchema = z.object({
-  name: nameSchema,
-
-  surname: nameSchema,
+  surname: z
+  .string()
+  .trim()
+  .min(2, 'Sobrenome deve ter pelo menos 2 caracteres')
+  .refine((value) => /^[A-Za-zÀ-ÿ\s'-]+$/.test(value), {
+    message: 'Sobrenome não pode conter números ou caracteres especiais',
+  }),
 
   email: z
     .string()
@@ -94,11 +98,14 @@ export const orderSchema = z.object({
       return true;
     }, 'Telefone inválido'),
 
-  cpf: z
+    cpf: z
     .string()
     .min(1, 'CPF é obrigatório')
     .refine((value) => {
       const normalized = value.replace(/\D/g, '');
+  
+      if (normalized.length !== 11) return false;
+  
       return cpf.isValid(normalized);
     }, 'CPF inválido'),
 
@@ -142,10 +149,15 @@ const Order = () => {
   const totalFinanced = installmentValue * 12;
 
   const handleChange = (field: keyof FormData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  
+    setErrors((prev) => ({
+      ...prev,
+      [field]: '',
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -301,7 +313,7 @@ const Order = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} noValidate className="space-y-8">
               {/* Personal Info */}
               <section className="bg-card rounded-lg p-6 shadow-elegant">
                 <h2 className="font-display text-lg font-semibold mb-6">Dados Pessoais</h2>

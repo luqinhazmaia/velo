@@ -73,6 +73,14 @@ export class OrderPage extends BasePage {
     await this.inputCpf.fill(data.cpf);
   }
 
+  async fillIncorrectPersonalData(): Promise<void> {
+    await this.inputName.fill('123##');
+    await this.inputSurname.fill('@@!#@!####');
+    await this.inputEmail.fill('13123123.mail.com');
+    await this.inputPhone.fill('001547');
+    await this.inputCpf.fill('002157744');
+  }
+
   async selectStore(storeLabel: string): Promise<void> {
     await this.storeSelectTrigger.click();
     await this.page.getByRole('option', { name: storeLabel }).click();

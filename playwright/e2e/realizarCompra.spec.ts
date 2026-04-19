@@ -70,7 +70,7 @@ test.describe('Compra do veículo com sucesso', () => {
 });
 
 test.describe('Compra do veículo - validar campos obrigatórios', () => {
-  test('deve validar campos obrigatórios', async ({
+  test('Usuário não preencheu nenhum campo obrigatório: ', async ({
     page,
     landingPage,
     configuratorPage,
@@ -87,6 +87,32 @@ test.describe('Compra do veículo - validar campos obrigatórios', () => {
 
     await expect(page.locator('form')).toContainText('Nome deve ter pelo menos 2 caracteres');
     await expect(page.locator('form')).toContainText('Sobrenome deve ter pelo menos 2 caracteres');
+    await expect(page.locator('form')).toContainText('Email inválido');
+    await expect(page.locator('form')).toContainText('Telefone é obrigatório');
+    await expect(page.locator('form')).toContainText('CPF é obrigatório');
+    await expect(page.locator('form')).toContainText('Selecione uma loja');
+    await expect(page.locator('form')).toContainText('Aceite os termos');
+  });
+
+  test('Usuário preencheu os campos obrigatórios, mas com valores inválidos: ', async ({
+    page,
+    landingPage,
+    configuratorPage,
+    orderPage,
+  }) => {
+    await irParaConfiguratorAPartirDaHome(landingPage);
+
+    const choices = buildRandomConfiguratorChoices();
+    await aplicarConfiguracaoAleatoria(configuratorPage, choices);
+    await configuratorPage.goToCheckout();
+    await expect(page).toHaveURL(/\/order/);
+
+    await orderPage.fillIncorrectPersonalData();
+    await orderPage.selectPaymentAvista();
+    await orderPage.submitOrder();
+    
+    await expect(page.locator('form')).toContainText('Nome não pode conter números ou caracteres especiais');
+    await expect(page.locator('form')).toContainText('Sobrenome não pode conter números ou caracteres especiais');
     await expect(page.locator('form')).toContainText('Email inválido');
     await expect(page.locator('form')).toContainText('Telefone inválido');
     await expect(page.locator('form')).toContainText('CPF inválido');

@@ -1,4 +1,5 @@
-import { faker } from '@faker-js/faker';
+import { faker, fakerPT_BR } from '@faker-js/faker';
+import { cpf } from 'cpf-cnpj-validator';
 import type { ExteriorColorId, WheelTypeId } from '../pages/configurator.page';
 import type { CheckoutPersonalData } from '../pages/order.page';
 
@@ -23,9 +24,12 @@ export function buildRandomConfiguratorChoices(): RandomConfiguratorChoices {
   };
 }
 
-function formatBrazilPhone(digits11: string): string {
-  const d = digits11.replace(/\D/g, '').padStart(11, '0').slice(0, 11);
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+function generateBrazilPhone() {
+  const ddd = faker.number.int({ min: 11, max: 99 }).toString();
+  const firstDigit = '9'; // celular válido
+  const rest = faker.number.int({ min: 10000000, max: 99999999 }).toString();
+
+  return `(${ddd}) ${firstDigit}${rest.slice(0, 4)}-${rest.slice(4)}`;
 }
 
 function formatBrazilCpf(digits11: string): string {
@@ -35,13 +39,14 @@ function formatBrazilCpf(digits11: string): string {
 
 /** Dados compatíveis com máscaras e validação Zod em {@link src/pages/Order.tsx}. */
 export function buildCheckoutPerson(): CheckoutPersonalData {
-  const first = faker.person.firstName();
-  const last = faker.person.lastName();
+  const first = fakerPT_BR.person.firstName();
+  const last = fakerPT_BR.person.lastName();
+
   return {
     name: first,
     surname: last,
     email: faker.internet.email({ firstName: first, lastName: last }),
-    phone: formatBrazilPhone(faker.string.numeric(11)),
-    cpf: formatBrazilCpf(faker.string.numeric(11)),
+    phone: generateBrazilPhone(),
+    cpf: cpf.generate(), // ✅ sempre válido
   };
 }
