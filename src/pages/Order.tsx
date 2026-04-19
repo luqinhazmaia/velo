@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import InputMask from 'react-input-mask';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { cpf } from 'cpf-cnpj-validator';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,13 +59,51 @@ const stores = [
   'Velô Ibirapuera - Av. Ibirapuera, 3000',
 ];
 
-const orderSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  surname: z.string().min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  phone: z.string().min(14, 'Telefone inválido'),
-  cpf: z.string().min(14, 'CPF inválido'),
+const nameSchema = z
+  .string()
+  .trim()
+  .min(2, 'Deve ter pelo menos 2 caracteres')
+  .refine((value) => /^[A-Za-zÀ-ÿ\s'-]+$/.test(value), {
+    message: 'Não pode conter números ou caracteres especiais',
+  });
+
+export const orderSchema = z.object({
+  name: nameSchema,
+
+  surname: nameSchema,
+
+  email: z
+    .string()
+    .trim()
+    .email('Email inválido'),
+
+  phone: z
+    .string()
+    .min(1, 'Telefone é obrigatório')
+    .refine((value) => {
+      const normalized = value.replace(/\D/g, '');
+
+      if (normalized.length < 10 || normalized.length > 11) {
+        return false;
+      }
+
+      if (normalized.length === 11 && normalized[2] !== '9') {
+        return false;
+      }
+
+      return true;
+    }, 'Telefone inválido'),
+
+  cpf: z
+    .string()
+    .min(1, 'CPF é obrigatório')
+    .refine((value) => {
+      const normalized = value.replace(/\D/g, '');
+      return cpf.isValid(normalized);
+    }, 'CPF inválido'),
+
   store: z.string().min(1, 'Selecione uma loja'),
+
   terms: z.boolean().refine((val) => val === true, 'Aceite os termos'),
 });
 
@@ -111,15 +150,20 @@ const Order = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validate
+  
     const result = orderSchema.safeParse(formData);
+  
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof FormData, string>> = {};
+    
       result.error.errors.forEach((err) => {
         const field = err.path[0] as keyof FormData;
-        fieldErrors[field] = err.message;
+    
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = err.message;
+        }
       });
+    
       setErrors(fieldErrors);
       return;
     }
@@ -265,6 +309,16 @@ const Order = () => {
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome</Label>
                     <Input
+                      onBlur={() => {
+                        const result = orderSchema.shape.name.safeParse(formData.name);
+                      
+                        if (!result.success) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            name: result.error.errors[0].message,
+                          }));
+                        }
+                      }}
                       id="name"
                       data-testid="checkout-name"
                       value={formData.name}
@@ -277,6 +331,16 @@ const Order = () => {
                     <Label htmlFor="surname">Sobrenome</Label>
                     <Input
                       id="surname"
+                      onBlur={() => {
+                        const result = orderSchema.shape.surname.safeParse(formData.surname);
+                      
+                        if (!result.success) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            surname: result.error.errors[0].message,
+                          }));
+                        }
+                      }}
                       data-testid="checkout-surname"
                       value={formData.surname}
                       onChange={(e) => handleChange('surname', e.target.value)}
@@ -287,6 +351,16 @@ const Order = () => {
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
+                      onBlur={() => {
+                        const result = orderSchema.shape.email.safeParse(formData.email);
+                      
+                        if (!result.success) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            email: result.error.errors[0].message,
+                          }));
+                        }
+                      }}
                       id="email"
                       type="email"
                       data-testid="checkout-email"
@@ -302,6 +376,16 @@ const Order = () => {
                       mask="(99) 99999-9999"
                       value={formData.phone}
                       onChange={(e) => handleChange('phone', e.target.value)}
+                      onBlur={() => {
+                        const result = orderSchema.shape.phone.safeParse(formData.phone);
+                      
+                        if (!result.success) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            phone: result.error.errors[0].message,
+                          }));
+                        }
+                      }}
                     >
                       {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
                         <Input
@@ -320,6 +404,16 @@ const Order = () => {
                       mask="999.999.999-99"
                       value={formData.cpf}
                       onChange={(e) => handleChange('cpf', e.target.value)}
+                      onBlur={() => {
+                        const result = orderSchema.shape.cpf.safeParse(formData.cpf);
+                      
+                        if (!result.success) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            cpf: result.error.errors[0].message,
+                          }));
+                        }
+                      }}
                     >
                       {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
                         <Input
@@ -330,13 +424,27 @@ const Order = () => {
                         />
                       )}
                     </InputMask>
-                    {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+
+                    {errors.cpf && (
+                      <p className="text-sm text-destructive">{errors.cpf}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="store">Loja para Retirada</Label>
                     <Select
                       value={formData.store}
-                      onValueChange={(value) => handleChange('store', value)}
+                      onValueChange={(value) => {
+                        handleChange('store', value);
+                      
+                        const result = orderSchema.shape.store.safeParse(value);
+                      
+                        if (!result.success) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            store: result.error.errors[0].message,
+                          }));
+                        }
+                      }}
                     >
                       <SelectTrigger
                         id="store"
